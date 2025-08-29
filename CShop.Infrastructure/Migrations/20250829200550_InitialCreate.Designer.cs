@@ -4,6 +4,7 @@ using CShop.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CShop.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250829200550_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -137,43 +140,6 @@ namespace CShop.Infrastructure.Migrations
                     b.ToTable("Products");
                 });
 
-            modelBuilder.Entity("CShop.Domain.Entities.ProductTag", b =>
-                {
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("TagId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("AddedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("ProductId", "TagId");
-
-                    b.HasIndex("TagId");
-
-                    b.ToTable("ProductTags");
-                });
-
-            modelBuilder.Entity("CShop.Domain.Entities.Tag", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Tags");
-                });
-
             modelBuilder.Entity("CShop.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -284,25 +250,6 @@ namespace CShop.Infrastructure.Migrations
                     b.Navigation("Category");
                 });
 
-            modelBuilder.Entity("CShop.Domain.Entities.ProductTag", b =>
-                {
-                    b.HasOne("CShop.Domain.Entities.Product", "Product")
-                        .WithMany("ProductTags")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("CShop.Domain.Entities.Tag", "Tag")
-                        .WithMany("ProductTags")
-                        .HasForeignKey("TagId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("Tag");
-                });
-
             modelBuilder.Entity("CShop.Domain.Entities.UserProfile", b =>
                 {
                     b.HasOne("CShop.Domain.Entities.User", "User")
@@ -329,13 +276,6 @@ namespace CShop.Infrastructure.Migrations
             modelBuilder.Entity("CShop.Domain.Entities.Product", b =>
                 {
                     b.Navigation("OrderItems");
-
-                    b.Navigation("ProductTags");
-                });
-
-            modelBuilder.Entity("CShop.Domain.Entities.Tag", b =>
-                {
-                    b.Navigation("ProductTags");
                 });
 
             modelBuilder.Entity("CShop.Domain.Entities.User", b =>
