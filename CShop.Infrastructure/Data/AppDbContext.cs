@@ -23,7 +23,7 @@ namespace CShop.Infrastructure.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-              base.OnModelCreating(modelBuilder);
+            base.OnModelCreating(modelBuilder);
 
             // User <-> UserProfile (1:1)
             modelBuilder.Entity<User>()
