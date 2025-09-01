@@ -1,0 +1,64 @@
+﻿@page "/role"
+@inject IRoleService RoleService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudButton Color="Color.Primary" OnClick="CreateRoleDialog" Variant="Variant.Filled" Class="mb-3">
+    Create New Role
+</MudButton>
+
+<MudTable Items="Roles" Hover="true" Bordered="true">
+    <HeaderContent>
+        <MudTh>Name</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.Name</MudTd>
+        <MudTd>
+            <MudButton Color="Color.Warning" Size="Size.Small" OnClick="@(() => EditRoleDialog(context))">Edit</MudButton>
+            <MudButton Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteRole(context.Id))">Delete</MudButton>
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<RoleDto> Roles = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRoles();
+    }
+
+    private async Task LoadRoles()
+    {
+        Roles = (await RoleService.GetAllAsync()).ToList();
+    }
+
+    private async Task CreateRoleDialog()
+    {
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
+        var dialog = await DialogService.ShowAsync<RoleDialog>("Create Role", options: options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+            await LoadRoles();
+    }
+
+    private async Task EditRoleDialog(RoleDto role)
+    {
+        var parameters = new DialogParameters { ["Role"] = role };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
+        var dialog = await DialogService.ShowAsync<RoleDialog>("Edit Role", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+            await LoadRoles();
+    }
+
+    private async Task DeleteRole(Guid roleId)
+    {
+        bool success = await RoleService.DeleteAsync(roleId);
+        Snackbar.Add(success ? "Role deleted." : "Delete failed.", success ? Severity.Success : Severity.Error);
+        await LoadRoles();
+    }
+}

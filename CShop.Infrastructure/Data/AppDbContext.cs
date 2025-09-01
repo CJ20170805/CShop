@@ -14,6 +14,7 @@ namespace CShop.Infrastructure.Data
 
         public DbSet<User> Users { get; set; }
         public DbSet<UserProfile> UserProfiles { get; set; }
+        public DbSet<Role> Roles { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<Order> Orders { get; set; }
@@ -25,11 +26,22 @@ namespace CShop.Infrastructure.Data
         {
             base.OnModelCreating(modelBuilder);
 
+
+            modelBuilder.Entity<Role>().ToTable("Roles");
+
             // User <-> UserProfile (1:1)
             modelBuilder.Entity<User>()
               .HasOne(u => u.Profile)
-              .WithOne(p => p.User)
+              .WithOne(p => p.User)  
               .HasForeignKey<UserProfile>(p => p.UserId);
+
+            // User <-> Role (M:M)
+            modelBuilder.Entity<User>()
+                .HasMany(u => u.Roles)
+                .WithMany(r => r.Users)
+                .UsingEntity(
+                    j => j.ToTable("UserRoles")
+                );
 
             // Category hierachy (Parent <-> Subcategories)
             modelBuilder.Entity<Category>()

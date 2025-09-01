@@ -11,7 +11,8 @@ namespace CShop.Domain.Entities
         public Guid Id { get; set; }
         public string Email { get; set; } = null!;
         public string PasswordHash { get; set; } = null!;
-        public string Role { get; set; } = "Customer";
+
+        public ICollection<Role> Roles { get; set; } = null!;
 
         public UserProfile Profile { get; set; } = null!;
         public ICollection<Order> Orders { get; set; } = new List<Order>();

@@ -1,0 +1,55 @@
+﻿@inject IRoleService RoleService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="RoleInternal.Name" Label="Role Name" Required="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Save">Save</MudButton>
+        <MudButton Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public RoleDto? Role { get; set; }
+
+    private RoleDto RoleInternal = new();
+
+    protected override void OnInitialized()
+    {
+        if (Role != null)
+            RoleInternal = new RoleDto { Id = Role.Id, Name = Role.Name };
+        else
+            RoleInternal = new RoleDto();
+    }
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(RoleInternal.Name))
+        {
+            Snackbar.Add("Name is required.", Severity.Warning);
+            return;
+        }
+
+        if (RoleInternal.Id == Guid.Empty)
+        {
+            await RoleService.CreateAsync(RoleInternal);
+            Snackbar.Add("Role created.", Severity.Success);
+        }
+        else
+        {
+            await RoleService.UpdateAsync(RoleInternal);
+            Snackbar.Add("Role updated.", Severity.Success);
+        }
+
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}
