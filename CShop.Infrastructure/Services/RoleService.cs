@@ -1,7 +1,9 @@
 ﻿using CShop.Application.DTOs;
 using CShop.Application.Interfaces;
-using CShop.Infrastructure.Data;
 using CShop.Domain.Entities;
+using CShop.Infrastructure.Data;
+using CShop.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -13,17 +15,24 @@ namespace CShop.Infrastructure.Services
 {
     public class RoleService : IRoleService
     {
-        private readonly AppDbContext _context;
-        public RoleService(AppDbContext context) => _context = context;
+       // private readonly AppDbContext _context;
+        private readonly UserManager<AppUser> _userManager;
+        private readonly RoleManager<AppRole> _roleManager;
+        // public RoleService(AppDbContext context) => _context = context;
+        public RoleService(UserManager<AppUser> userManager, RoleManager<AppRole> roleManager)
+        {
+            _userManager = userManager;
+            _roleManager = roleManager;
+        }
 
         public async Task<IEnumerable<RoleDto>> GetAllAsync()
         {
-            return await _context.Roles
+            return await _roleManager.Roles
                 .Select(
                     r => new RoleDto
                     {
                         Id = r.Id,
-                        Name = r.Name,
+                        Name = r.Name!,
                     })
                 .ToListAsync();
 
@@ -31,18 +40,25 @@ namespace CShop.Infrastructure.Services
 
         public async Task<RoleDto?> GetByIdAsync(Guid id)
         {
-            var role = await _context.Roles.FindAsync(id);
+            var role = await _roleManager.FindByIdAsync(id.ToString());
             if (role == null) { return null; }
 
-            return new RoleDto { Id = role.Id, Name = role.Name };
+            return new RoleDto { Id = role.Id, Name = role.Name! };
         }
 
         public async Task<RoleDto> CreateAsync(RoleDto dto)
         {
-            var role = new Role { Id = dto.Id, Name = dto.Name };
+            var role = new AppRole 
+            { 
+                Id = dto.Id, 
+                Name = dto.Name,
+                NormalizedName = dto.Name!.ToUpper()
+            };
 
-            _context.Roles.Add(role);
-            await _context.SaveChangesAsync();
+            var result = await _roleManager.CreateAsync(role);
+
+            if (!result.Succeeded)
+                throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
 
             return new RoleDto
             {
@@ -53,59 +69,65 @@ namespace CShop.Infrastructure.Services
 
         public async Task<RoleDto?> UpdateAsync(RoleDto dto)
         {
-            var role = await _context.Roles.FindAsync(dto.Id);
+            var role = await _roleManager.FindByIdAsync(dto.Id.ToString());
             if (role == null) { return null; }
 
             role.Name = dto.Name;
+            role.NormalizedName = dto.Name!.ToUpper();
 
-            await _context.SaveChangesAsync();
+
+            var result = await _roleManager.UpdateAsync(role);
+
+            if (!result.Succeeded)
+                throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
 
             return new RoleDto { Id = dto.Id, Name = dto.Name };
         }
 
         public async Task<bool> DeleteAsync(Guid id)
         {
-            var role = await _context.Roles.FindAsync(id);
+            var role = await _roleManager.FindByIdAsync(id.ToString());
             if (role == null) return false;
 
-            _context.Roles.Remove(role);
-            await _context.SaveChangesAsync();
+            var result = await _roleManager.DeleteAsync(role);
 
-            return true;
+            return result.Succeeded;
         }
 
-        public async Task<bool> AssignRoleToUserAsync(Guid userId, Guid roleId)
-        {
-            var user = await _context.Users
-                .Include(u => u.Roles)
-                .FirstOrDefaultAsync(u => u.Id == userId);
+        //public async Task<bool> AssignRoleToUserAsync(Guid userId, Guid roleId)
+        //{
+        //    var user = await _userManager.FindByIdAsync(userId.ToString());
+        //    var role = await _roleManager.FindByIdAsync(roleId.ToString());
 
-            var role = await _context.Roles.FindAsync(roleId);
+        //    if (user == null || role == null) return false;
 
-            if (user == null || role == null) { return false; }
+        //    if (string.IsNullOrWhiteSpace(role?.Name)) return false;
 
-            if (!user.Roles.Any(r => r.Id == roleId))
-            {
-                user.Roles.Add(role);
-                await _context.SaveChangesAsync();
-            }
-            return true;
-        }
+        //    var isInRole = await _userManager.IsInRoleAsync(user, role.Name);
+        //    if (!isInRole)
+        //    {
+        //        var result = await _userManager.AddToRoleAsync(user, role.Name);
+        //        return result.Succeeded;
+        //    }
 
-        public async Task<bool> RemoveRoleFromUserAsync(Guid userId, Guid roleId)
-        {
-            var user = await _context.Users
-           .Include(u => u.Roles)
-           .FirstOrDefaultAsync(u => u.Id == userId);
-            if (user == null) return false;
+        //    return true;
 
-            var role = user.Roles.FirstOrDefault(r => r.Id == roleId);
-            if (role == null) return false;
+        //}
 
-            user.Roles.Remove(role);
-            await _context.SaveChangesAsync();
+        //public async Task<bool> RemoveRoleFromUserAsync(Guid userId, Guid roleId)
+        //{
+        //    var user = await _context.Users
+        //   .Include(u => u.Roles)
+        //   .FirstOrDefaultAsync(u => u.Id == userId);
+        //    if (user == null) return false;
 
-            return true;
-        }
+        //    var role = user.Roles.FirstOrDefault(r => r.Id == roleId);
+        //    if (role == null) return false;
+
+        //    user.Roles.Remove(role);
+        //    await _context.SaveChangesAsync();
+
+        //    return true;
+        //}
     }
 }

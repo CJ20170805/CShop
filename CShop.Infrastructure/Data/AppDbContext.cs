@@ -1,20 +1,20 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using CShop.Domain.Entities;
+﻿using CShop.Domain.Entities;
+using CShop.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace CShop.Infrastructure.Data
 {
-    public class AppDbContext: DbContext
+    public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options): base(options) {}
 
-        public DbSet<User> Users { get; set; }
+
+        //public DbSet<User> Users { get; set; }
+        //public DbSet<Role> Roles { get; set; }
         public DbSet<UserProfile> UserProfiles { get; set; }
-        public DbSet<Role> Roles { get; set; }
+        public DbSet<UserAddress> UserAddresses { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<Order> Orders { get; set; }
@@ -22,26 +22,51 @@ namespace CShop.Infrastructure.Data
         public DbSet<Tag> Tags { get; set; }
         public DbSet<ProductTag> ProductTags { get; set; }
 
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
 
-            modelBuilder.Entity<Role>().ToTable("Roles");
+            // Optional: rename Identity tables
+            modelBuilder.Entity<AppUser>().ToTable("Users");
+            modelBuilder.Entity<AppRole>().ToTable("Roles");
+            modelBuilder.Entity<IdentityUserRole<Guid>>().ToTable("UserRoles");
+            modelBuilder.Entity<IdentityUserClaim<Guid>>().ToTable("UserClaims");
+            modelBuilder.Entity<IdentityUserLogin<Guid>>().ToTable("UserLogins");
+            modelBuilder.Entity<IdentityRoleClaim<Guid>>().ToTable("RoleClaims");
+            modelBuilder.Entity<IdentityUserToken<Guid>>().ToTable("UserTokens");
 
             // User <-> UserProfile (1:1)
-            modelBuilder.Entity<User>()
-              .HasOne(u => u.Profile)
-              .WithOne(p => p.User)  
-              .HasForeignKey<UserProfile>(p => p.UserId);
+            //modelBuilder.Entity<User>()
+            //  .HasOne(u => u.Profile)
+            //  .WithOne(p => p.User)  
+            //  .HasForeignKey<UserProfile>(p => p.UserId);
 
             // User <-> Role (M:M)
-            modelBuilder.Entity<User>()
-                .HasMany(u => u.Roles)
-                .WithMany(r => r.Users)
-                .UsingEntity(
-                    j => j.ToTable("UserRoles")
-                );
+            //modelBuilder.Entity<User>()
+            //    .HasMany(u => u.Roles)
+            //    .WithMany(r => r.Users)
+            //    .UsingEntity(
+            //        j => j.ToTable("UserRoles")
+            //    );
+
+            modelBuilder.Entity<UserProfile>()
+                .HasOne<AppUser>()
+                .WithOne(u => u.Profile)
+                .HasForeignKey<UserProfile>(p => p.UserId)
+                .IsRequired();
+
+            modelBuilder.Entity<UserAddress>()
+                .HasOne<AppUser>()
+                .WithMany(u => u.Addresses)
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Order>()
+                .HasOne<AppUser>()
+                .WithMany(u => u.Orders)
+                .HasForeignKey(o => o.UserId);
 
             // Category hierachy (Parent <-> Subcategories)
             modelBuilder.Entity<Category>()

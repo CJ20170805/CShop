@@ -1,34 +1,125 @@
-﻿@inherits LayoutComponentBase
+﻿@using CShop.Admin.Services
+@inherits LayoutComponentBase
+@inject ThemeService ThemeService
+@inject NavigationManager NavigationManager
 
-@* Required *@
-<MudThemeProvider />
+<MudThemeProvider Theme="@_theme" IsDarkMode="@ThemeService.IsDarkMode" />
 <MudPopoverProvider />
-
-@* Needed for dialogs *@
-<MudDialogProvider />
-
-@* Needed for snackbars *@
+<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small" />
 <MudSnackbarProvider />
 
 
-<div class="page">
-    <div class="sidebar">
+<MudLayout>
+    <MudAppBar Elevation="1">
+        @* Drawer toggle button *@
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                       OnClick="@((e) => DrawerToggle())" />
+         @* System name *@
+        <MudText Typo="Typo.h5" Class="ml-3">Admin</MudText>
+        <MudSpacer />
+
+        @* Theme toggle *@
+        <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@ToggleDarkMode" />
+
+        @* User Info dropdown *@
+        <MudMenu Icon="@Icons.Material.Filled.MoreVert" AriaLabel="Open user menu">
+            <MudMenuItem>Profile</MudMenuItem>
+            <MudMenuItem>My account</MudMenuItem>
+            <MudMenuItem OnClick="HandleLogout">Logout</MudMenuItem>
+        </MudMenu>
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
         <NavMenu />
-    </div>
+    </MudDrawer>
+    <MudMainContent MaxWidth="MaxWidth.Medium" Class="mt-16 pa-4">
+        @Body
+    </MudMainContent>
+</MudLayout>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
 
 <div id="blazor-error-ui">
     An unhandled error has occurred.
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
+
+
+@code {
+    private bool _drawerOpen = true;
+    private MudTheme _theme = new();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        _theme = new()
+        {
+            PaletteLight = _lightPalette,
+            PaletteDark = _darkPalette,
+            LayoutProperties = new LayoutProperties()
+        };
+
+        ThemeService.OnChange += async () => await InvokeAsync(StateHasChanged);
+
+        Console.WriteLine("Initialing~~~~~~");
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(1000); // Delay before fetching notifications
+            //await GetNotificationAsnyc();
+            await InvokeAsync(StateHasChanged); // Ensure UI is updated after fetching notifications
+           // await ListenNotification();
+        });
+    }
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    public string DarkLightModeButtonIcon => ThemeService.IsDarkMode switch
+    {
+        true => Icons.Material.Rounded.AutoMode,
+        false => Icons.Material.Outlined.DarkMode,
+    };
+
+    private void ToggleDarkMode() => ThemeService.ToggleDarkMode();
+
+    private void HandleLogout()
+    {
+        // Redirect to the login page or home page
+        NavigationManager.NavigateTo("/Account/logout", forceLoad: true);
+    }
+
+    private readonly PaletteLight _lightPalette = new()
+    {
+        Black = "#110e2d",
+        AppbarText = "#424242",
+        AppbarBackground = "rgba(255,255,255,0.8)",
+        DrawerBackground = "#ffffff",
+        GrayLight = "#e8e8e8",
+        GrayLighter = "#f9f9f9",
+    };
+
+    private readonly PaletteDark _darkPalette = new()
+    {
+        Primary = "#7e6fff",
+        Surface = "#1e1e2d",
+        Background = "#1a1a27",
+        BackgroundGray = "#151521",
+        AppbarText = "#92929f",
+        AppbarBackground = "rgba(26,26,39,0.8)",
+        DrawerBackground = "#1a1a27",
+        ActionDefault = "#74718e",
+        ActionDisabled = "#9999994d",
+        ActionDisabledBackground = "#605f6d4d",
+        TextPrimary = "#b2b0bf",
+        TextSecondary = "#92929f",
+        TextDisabled = "#ffffff33",
+        DrawerIcon = "#92929f",
+        DrawerText = "#92929f",
+        GrayLight = "#2a2833",
+        GrayLighter = "#1e1e2d",
+        Info = "#4a86ff",
+        Success = "#3dcb6c",
+    };
+}

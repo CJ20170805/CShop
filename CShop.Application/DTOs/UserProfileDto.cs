@@ -9,7 +9,9 @@ namespace CShop.Application.DTOs
 {
     public class UserProfileDto
     {
-        public string FullName { get; set; } = null!;
+        public string FirstName { get; set; } = null!;
+        public string MiddleName { get; set; } = null!;
+        public string LastName { get; set; } = null!;
         public string Address { get; set; } = null!;
         public string Phone { get; set; } = null!;
         public string City { get; set; } = null!;

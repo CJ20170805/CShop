@@ -1,0 +1,73 @@
+﻿@page "/user"
+@inject IUserService UserService
+@inject IRoleService RoleService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudButton Color="Color.Primary" OnClick="CreateUserDialog" Variant="Variant.Filled" Class="mb-3">
+    Create New User
+</MudButton>
+
+<MudTable Items="Users" Hover="true" Bordered="true">
+    <HeaderContent>
+        <MudTh>UserName</MudTh>
+        <MudTh>Email</MudTh>
+        <MudTh>Roles</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.UserName</MudTd>
+        <MudTd>@context.Email</MudTd>
+        <MudTd>@string.Join(", ", context.Roles)</MudTd>
+        <MudTd>
+            <MudButton Color="Color.Warning" Size="Size.Small" OnClick="@(() => EditUserDialog(context))">Edit</MudButton>
+            <MudButton Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(context.Id))">Delete</MudButton>
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<UserDto> Users = new();
+    private IEnumerable<RoleDto> RolesList = new List<RoleDto>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }  
+
+    private async Task LoadData()
+    {
+        Users = (await UserService.GetAllAsync()).ToList();
+
+        var roles = await RoleService.GetAllAsync();
+        RolesList = roles;
+    }
+
+    private async Task CreateUserDialog()
+    {
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium };
+        var dialog = await DialogService.ShowAsync<UserDialog>("Create User", options: options);
+        var result = await dialog.Result;
+
+        if (result?.Canceled != true)
+            await LoadData();
+    }
+
+    private async Task EditUserDialog(UserDto user)
+    {
+        var parameters = new DialogParameters { ["User"] = user };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium };
+        var dialog = await DialogService.ShowAsync<UserDialog>("Edit User", parameters, options);
+        var result = await dialog.Result;
+
+        if (result?.Canceled != true)
+            await LoadData();
+    }
+
+    private async Task DeleteUser(Guid userId)
+    {
+        bool success = await UserService.DeleteAsync(userId);
+        Snackbar.Add(success ? "User deleted." : "Delete failed.", success ? Severity.Success : Severity.Error);
+        await LoadData();
+    }
+}

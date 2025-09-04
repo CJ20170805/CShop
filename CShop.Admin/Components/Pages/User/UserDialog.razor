@@ -1,0 +1,177 @@
+﻿@inject IUserService UserService
+@inject IRoleService RoleService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="UserInternal.Email" Label="Email" Required="true" />
+        <MudTextField @bind-Value="UserInternal.UserName" Label="User Name" Required="true" />
+        <MudTextField @bind-Value="UserInternal.Profile.FirstName" Label="First Name" Required="true" />
+        <MudTextField @bind-Value="UserInternal.Profile.MiddleName" Label="Middle Name" />
+        <MudTextField @bind-Value="UserInternal.Profile.LastName" Label="Last Name" Required="true" />
+        <MudTextField @bind-Value="UserInternal.Profile.Address" Label="Address" />
+        <MudTextField @bind-Value="UserInternal.Profile.Phone" Label="Phone" />
+        <MudTextField @bind-Value="UserInternal.Profile.City" Label="City" />
+        <MudTextField @bind-Value="UserInternal.Profile.Country" Label="Country" />
+       
+        @if (User == null)
+        {
+            <MudTextField @bind-Value="UserInternal.PlainPassword"
+                          Label="Password"
+                          InputType="InputType.Password"
+                          Required="true" />
+            <MudTextField @bind-Value="ConfirmPassword"
+                          Label="Confirm Password"
+                          InputType="InputType.Password"
+                          Required="true" />
+        }
+
+        <MudDivider Class="my-2" />
+        <MudText Typo="Typo.subtitle1">Roles:</MudText>
+        @if (AllRoles != null)
+        {
+            <MudSelect T="string"
+                       Label="Select Roles"
+                       SelectedValues="SelectedRoleNames"
+                       SelectedValuesChanged="OnSelectedValuesChanged"
+                       MultiSelection="true"
+                       Required="true"
+                       Dense="true">
+                @foreach (var role in AllRoles)
+                {
+                    <MudSelectItem T="string" Value="@role.Name">@role.Name</MudSelectItem>
+                }
+            </MudSelect>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Save">Save</MudButton>
+        <MudButton Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public UserDto? User { get; set; }
+
+    private UserDto UserInternal = new();
+    private List<RoleDto> AllRoles = new();
+    private List<string> SelectedRoleNames = new List<string>();
+    private string ConfirmPassword { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (User != null)
+        {
+            UserInternal = new UserDto
+            {
+                Id = User.Id,
+                Email = User.Email,
+                UserName = User.UserName,
+                Profile = new UserProfileDto
+                {
+                    FirstName = User.Profile.FirstName,
+                    MiddleName = User.Profile.MiddleName,
+                    LastName = User.Profile.LastName,
+                    Phone = User.Profile.Phone,
+                    Address = User.Profile.Address,
+                    City = User.Profile.City,
+                    Country = User.Profile.Country
+                },
+                Roles = User.Roles
+            };
+        }
+        else
+        {
+            UserInternal = new UserDto
+            {
+                Profile = new UserProfileDto(),
+                Roles = new List<string>() {"Customer"},
+            };
+        }
+
+        AllRoles = (await RoleService.GetAllAsync()).ToList();
+
+
+        // Pre-select user's roles
+        SelectedRoleNames = AllRoles
+            .Where(r => UserInternal.Roles.Contains(r.Name))
+            .Select(r => r.Name)
+            .ToList();
+    }
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(UserInternal.Email) ||
+            string.IsNullOrWhiteSpace(UserInternal.Profile.FirstName) ||
+            string.IsNullOrWhiteSpace(UserInternal.Profile.LastName)
+        )
+        {
+            Snackbar.Add("Email and Full Name are required.", Severity.Warning);
+            return;
+        }
+
+        if(User == null)   // Creating Mode
+        {
+            if (string.IsNullOrWhiteSpace(UserInternal.PlainPassword) ||
+           string.IsNullOrWhiteSpace(ConfirmPassword))
+            {
+                Snackbar.Add("Password and Confirm Password are required.", Severity.Warning);
+                return;
+            }
+
+            if (UserInternal.PlainPassword != ConfirmPassword)
+            {
+                Snackbar.Add("Passwords do not match.", Severity.Error);
+                return;
+            }
+
+        }
+        // Roles validation
+        if (!SelectedRoleNames.Any())
+        {
+            Snackbar.Add("Please select at least one role.", Severity.Warning);
+            return;
+        }
+
+        // Assign selected roles by name
+        UserInternal.Roles = AllRoles
+            .Where(r => SelectedRoleNames.Contains(r.Name))
+            .Select(r => r.Name);
+
+        try
+        {
+            if (UserInternal.Id == Guid.Empty)
+            {
+                await UserService.CreateAsync(UserInternal);
+                Snackbar.Add("User created.", Severity.Success);
+            }
+            else
+            {
+                await UserService.UpdateAsync(UserInternal);
+                Snackbar.Add("User updated.", Severity.Success);
+            }    
+            
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+
+     
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void OnSelectedValuesChanged(IEnumerable<string> selectedValues) // Accept IEnumerable<string>
+    {
+        SelectedRoleNames = selectedValues.ToList();
+    }
+
+}

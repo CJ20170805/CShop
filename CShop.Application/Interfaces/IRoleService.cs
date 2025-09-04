@@ -16,7 +16,7 @@ namespace CShop.Application.Interfaces
         Task<bool> DeleteAsync(Guid id);
 
         // Assign/remove
-        Task<bool> AssignRoleToUserAsync(Guid userId, Guid roleId);
-        Task<bool> RemoveRoleFromUserAsync(Guid userId, Guid roleId);
+        //Task<bool> AssignRoleToUserAsync(Guid userId, Guid roleId);
+        //Task<bool> RemoveRoleFromUserAsync(Guid userId, Guid roleId);
     }
 }

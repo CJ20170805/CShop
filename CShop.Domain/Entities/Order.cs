@@ -19,7 +19,6 @@ namespace CShop.Domain.Entities
         public string? PaymentReference { get; set; }
 
         public Guid UserId { get; set; }
-        public User User { get; set; } = null!;
 
         public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
     }
