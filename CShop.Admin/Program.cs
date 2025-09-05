@@ -13,14 +13,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Add this line to register Razor Pages services
+builder.Services.AddRazorPages();
+
 builder.Services.AddMudServices();
-
 builder.Services.AddSingleton<ThemeService>();
-
-
-builder.Services.AddScoped<IRoleService, RoleService>();
-builder.Services.AddScoped<IUserService, UserService>();
-
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
@@ -29,11 +27,30 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // **Register Identity**
 builder.Services.AddIdentity<AppUser, AppRole>(options =>
 {
+    options.Password.RequireDigit = true;
     options.Password.RequiredLength = 6;
     options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireLowercase = true;
+    options.User.RequireUniqueEmail = true;
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/login";
+    options.AccessDeniedPath = "/access-denied";
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole("Admin"));
+});
+
+builder.Services.AddScoped<SignInManager<AppUser>>();
+builder.Services.AddScoped<UserManager<AppUser>>();
 
 // Register application services
 builder.Services.AddScoped<IRoleService, RoleService>();
@@ -46,16 +63,20 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
 app.UseAntiforgery();
+app.UseAuthentication();
+app.UseAuthorization();
 
+// Map Blazor component endpoints
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// Add this line to map Razor Pages endpoints
+app.MapRazorPages();
 
 app.Run();

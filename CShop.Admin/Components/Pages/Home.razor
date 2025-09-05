@@ -1,4 +1,6 @@
 ﻿@page "/"
+@attribute [Authorize(Roles = "Admin")]
+@layout MainLayout
 
 <PageTitle>Home</PageTitle>
 

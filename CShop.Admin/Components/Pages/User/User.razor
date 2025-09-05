@@ -1,4 +1,6 @@
 ﻿@page "/user"
+@layout MainLayout
+@attribute [Authorize(Roles = "Admin")]
 @inject IUserService UserService
 @inject IRoleService RoleService
 @inject IDialogService DialogService

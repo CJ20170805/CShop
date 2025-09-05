@@ -1,4 +1,5 @@
 ﻿@page "/role"
+@attribute [Authorize(Roles = "Admin")]
 @inject IRoleService RoleService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar

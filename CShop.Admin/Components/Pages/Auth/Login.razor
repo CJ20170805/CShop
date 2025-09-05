@@ -1,0 +1,68 @@
+﻿@page "/login"
+@layout AuthLayout
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject ILogger<Login> Logger
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@inject IHttpContextAccessor HttpContextAccessor
+
+<MudGrid Class="mt-14" Spacing="6" Justify="Justify.Center">
+     <MudItem>
+            <MudCard Style="width:400px;height:auto;">
+                <MudText Align="Align.Center" Typo="Typo.h6" Class="mt-4">Admin Login</MudText>
+                   <MudForm Model="LoginModel" Method="post" Action="/login-handler">
+                        <!-- This hidden input is crucial for antiforgery validation. -->
+                        <input name="__RequestVerificationToken" type="hidden" value="@GetAntiforgeryToken()" />
+
+                        <MudTextField T="string" @bind-Value="LoginModel.Email" Label="Email" Required="true" Name="Email" />
+                        <MudTextField T="string" @bind-Value="LoginModel.Password" Label="Password" InputType="InputType.Password" Required="true" Name="Password" />
+                        <MudCheckBox @bind-Value="LoginModel.RememberMe" Label="Remember me" Name="RememberMe" />
+
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">Login</MudButton>
+                    </MudForm>
+
+                 </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private LoginDto LoginModel = new();
+    private bool _showErrorAndRedirect = false;
+
+    protected override void OnInitialized()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var queryParameters = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+        if (queryParameters.TryGetValue("error", out var errorValue) && errorValue == "invalid")
+        {
+            Snackbar.Add("Invalid email or password.", Severity.Error);
+            _showErrorAndRedirect = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_showErrorAndRedirect)
+        {
+            _showErrorAndRedirect = false;
+            var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+            Navigation.NavigateTo(uri.GetLeftPart(UriPartial.Path), replace: true);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private string GetAntiforgeryToken()
+    {
+        var tokens = Antiforgery.GetAndStoreTokens(HttpContextAccessor.HttpContext!);
+        return tokens.RequestToken!;
+    }
+
+    public class LoginDto
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public bool RememberMe { get; set; } = false;
+    }
+}

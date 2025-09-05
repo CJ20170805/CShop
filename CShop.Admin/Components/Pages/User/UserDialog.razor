@@ -139,7 +139,7 @@
         // Assign selected roles by name
         UserInternal.Roles = AllRoles
             .Where(r => SelectedRoleNames.Contains(r.Name))
-            .Select(r => r.Name);
+            .Select(r => r.Name);  
 
         try
         {
