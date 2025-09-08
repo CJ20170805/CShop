@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using System;
 
-namespace CShop.Infrastructure.Identity
+namespace CShop.Domain.Identity
 {
     public class AppRole : IdentityRole<Guid>
     {

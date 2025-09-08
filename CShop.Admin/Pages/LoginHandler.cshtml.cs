@@ -1,20 +1,26 @@
-using CShop.Infrastructure.Identity;
+using CShop.Domain.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using System.Threading.Tasks;
+using CShop.Application.Interfaces;
 
 namespace CShop.Admin.Pages
 {
     public class LoginHandlerModel : PageModel
     {
+        private readonly IAppLogger<LoginHandlerModel> _logger;
         private readonly SignInManager<AppUser> _signInManager;
         private readonly UserManager<AppUser> _userManager;
 
-        public LoginHandlerModel(SignInManager<AppUser> signInManager, UserManager<AppUser> userManager)
+        public LoginHandlerModel(
+            IAppLogger<LoginHandlerModel> logger,
+            SignInManager<AppUser> signInManager,
+            UserManager<AppUser> userManager)
         {
+            _logger = logger;
             _signInManager = signInManager;
             _userManager = userManager;
+
         }
 
         [BindProperty]
@@ -28,9 +34,9 @@ namespace CShop.Admin.Pages
 
         public async Task<IActionResult> OnPostAsync()
         {
-            // You can add validation logic here if needed, or rely on client-side validation from the Blazor form.
-
+           // You can add validation logic here if needed, or rely on client-side validation from the Blazor form.
             var user = await _userManager.FindByEmailAsync(Email);
+            _logger.LogInformation("Email!!! {Email}", Email);
             if (user == null)
             {
                 // This is a simple redirect. In a real app, you might add a query parameter to show an error message.

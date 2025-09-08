@@ -2,6 +2,7 @@
 @inject IRoleService RoleService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IAppLogger<UserDialog> Logger
 
 <MudDialog>
     <DialogContent>
@@ -10,7 +11,6 @@
         <MudTextField @bind-Value="UserInternal.Profile.FirstName" Label="First Name" Required="true" />
         <MudTextField @bind-Value="UserInternal.Profile.MiddleName" Label="Middle Name" />
         <MudTextField @bind-Value="UserInternal.Profile.LastName" Label="Last Name" Required="true" />
-        <MudTextField @bind-Value="UserInternal.Profile.Address" Label="Address" />
         <MudTextField @bind-Value="UserInternal.Profile.Phone" Label="Phone" />
         <MudTextField @bind-Value="UserInternal.Profile.City" Label="City" />
         <MudTextField @bind-Value="UserInternal.Profile.Country" Label="Country" />
@@ -76,12 +76,12 @@
                     MiddleName = User.Profile.MiddleName,
                     LastName = User.Profile.LastName,
                     Phone = User.Profile.Phone,
-                    Address = User.Profile.Address,
                     City = User.Profile.City,
                     Country = User.Profile.Country
                 },
                 Roles = User.Roles
             };
+            Logger.LogInformation("Current existed User: {UserName}", User.UserName);
         }
         else
         {
@@ -90,6 +90,7 @@
                 Profile = new UserProfileDto(),
                 Roles = new List<string>() {"Customer"},
             };
+            Logger.LogInformation("Current new User: {UserInternal}", UserInternal);
         }
 
         AllRoles = (await RoleService.GetAllAsync()).ToList();

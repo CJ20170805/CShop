@@ -2,13 +2,31 @@ using CShop.Admin.Components;
 using CShop.Admin.Services;
 using CShop.Application.Interfaces;
 using CShop.Infrastructure.Data;
-using CShop.Infrastructure.Identity;
+using CShop.Domain.Identity;
 using CShop.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
+using NLog.Web;
+using CShop.Infrastructure.Logging;
+using AutoMapper;
+using CShop.Application.Mapping;
+
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+// Configure NLog
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Debug);
+builder.Host.UseNLog();
+
+builder.Services.AddScoped(typeof(IAppLogger<>), typeof(LoggerAdapter<>));
+
+builder.Services.AddAutoMapper(typeof(UserMappingProfile).Assembly);
+
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -49,8 +67,8 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole("Admin"));
 });
 
-builder.Services.AddScoped<SignInManager<AppUser>>();
-builder.Services.AddScoped<UserManager<AppUser>>();
+//builder.Services.AddScoped<SignInManager<AppUser>>();
+//builder.Services.AddScoped<UserManager<AppUser>>();
 
 // Register application services
 builder.Services.AddScoped<IRoleService, RoleService>();

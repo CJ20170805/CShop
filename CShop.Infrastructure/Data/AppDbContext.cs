@@ -1,5 +1,5 @@
 ﻿using CShop.Domain.Entities;
-using CShop.Infrastructure.Identity;
+using CShop.Domain.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;

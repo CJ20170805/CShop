@@ -2,7 +2,7 @@
 using CShop.Application.Interfaces;
 using CShop.Domain.Entities;
 using CShop.Infrastructure.Data;
-using CShop.Infrastructure.Identity;
+using CShop.Domain.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -10,19 +10,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
 
 namespace CShop.Infrastructure.Services
 {
     public class UserService: IUserService
     {
-        // private readonly AppDbContext _context;
         private readonly UserManager<AppUser> _userManager;
         private readonly RoleManager<AppRole> _roleManager;
-        //public UserService(AppDbContext context) => _context = context;
-        public UserService(UserManager<AppUser> userManager, RoleManager<AppRole> roleManager)
+        private readonly IMapper _mapper;
+
+        public UserService(UserManager<AppUser> userManager, RoleManager<AppRole> roleManager, IMapper mapper)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _mapper = mapper;
         }
         public async Task<IEnumerable<UserDto>> GetAllAsync()
         {
@@ -34,8 +36,9 @@ namespace CShop.Infrastructure.Services
             var result = new List<UserDto>();
             foreach (var user in users)
             {
-                var roles = await _userManager.GetRolesAsync(user);
-                result.Add(MapToDto(user, roles));
+                var dto = _mapper.Map<UserDto>(user);
+                dto.Roles = await _userManager.GetRolesAsync(user);
+                result.Add(dto);
             }
 
             return result;
@@ -49,26 +52,14 @@ namespace CShop.Infrastructure.Services
                 .FirstOrDefaultAsync(u => u.Id == id);
             if (user == null) return null;
 
-            var roles = await _userManager.GetRolesAsync(user);
-            return MapToDto(user, roles); 
+            var dto = _mapper.Map<UserDto>(user);
+            dto.Roles = await _userManager.GetRolesAsync(user);
+            return dto; 
         }
 
         public async Task<UserDto> CreateAsync(UserDto userDto)
         {
-            var user = new AppUser
-            {
-                UserName = userDto.UserName,
-                Email = userDto.Email,
-                Profile = new UserProfile
-                {
-                    FirstName = userDto.Profile.FirstName,
-                    MiddleName = userDto.Profile.MiddleName,
-                    LastName = userDto.Profile.LastName,
-                    Phone = userDto.Profile.Phone,
-                    City = userDto.Profile.City,
-                    Country = userDto.Profile.Country
-                },
-            };
+            var user = _mapper.Map<AppUser>(userDto);
 
             var result = await _userManager.CreateAsync(user, userDto.PlainPassword);
             if (!result.Succeeded)
@@ -85,8 +76,9 @@ namespace CShop.Infrastructure.Services
                 }
             }
 
-            var roles = await _userManager.GetRolesAsync(user);
-            return MapToDto(user, roles);
+            var dto = _mapper.Map<UserDto>(user);
+            dto.Roles = await _userManager.GetRolesAsync(user);
+            return dto;
         }
 
         public async Task<UserDto?> UpdateAsync(UserDto userDto)
@@ -98,15 +90,8 @@ namespace CShop.Infrastructure.Services
 
             if (user == null) return null;
 
-            // update profile
-            user.Email = userDto.Email;
-            user.UserName = userDto.UserName;
-            user.Profile.FirstName = userDto.Profile.FirstName;
-            user.Profile.MiddleName = userDto.Profile.MiddleName;
-            user.Profile.LastName = userDto.Profile.LastName;
-            user.Profile.Phone = userDto.Profile.Phone;
-            user.Profile.City = userDto.Profile.City;
-            user.Profile.Country = userDto.Profile.Country;
+            // update values
+            _mapper.Map(userDto, user);
 
             var updateResult = await _userManager.UpdateAsync(user);
             if (!updateResult.Succeeded)
@@ -125,9 +110,9 @@ namespace CShop.Infrastructure.Services
                 }
             }
 
-            var roles = await _userManager.GetRolesAsync(user);
-
-            return MapToDto(user, roles);
+            var dto = _mapper.Map<UserDto>(user);
+            dto.Roles = await _userManager.GetRolesAsync(user);
+            return dto;
         }
 
         public async Task<bool> DeleteAsync(Guid id)
@@ -138,24 +123,6 @@ namespace CShop.Infrastructure.Services
             var result = await _userManager.DeleteAsync(user);
             return result.Succeeded;
         }
-
-        private static UserDto MapToDto(AppUser user, IEnumerable<string> roles) =>
-            new UserDto
-            {
-                Id = user.Id,
-                UserName = user.UserName!,
-                Email = user.Email!,
-                Roles = roles,
-                Profile = new UserProfileDto
-                {
-                    FirstName = user.Profile.FirstName,
-                    MiddleName = user.Profile.MiddleName ?? "",
-                    LastName = user.Profile.LastName,
-                    Phone = user.Profile.Phone,
-                    City = user.Profile.City,
-                    Country = user.Profile.Country 
-                }
-            };
 
     }
 }

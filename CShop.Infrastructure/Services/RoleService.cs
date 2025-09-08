@@ -2,7 +2,7 @@
 using CShop.Application.Interfaces;
 using CShop.Domain.Entities;
 using CShop.Infrastructure.Data;
-using CShop.Infrastructure.Identity;
+using CShop.Domain.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System;
