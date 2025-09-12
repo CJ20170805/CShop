@@ -1,48 +1,63 @@
-﻿@inject IUserService UserService
+﻿@using AutoMapper
+@using FluentValidation
+@using CShop.Application.DTOs
+@using CShop.Application.Validators
+@inject IUserService UserService
 @inject IRoleService RoleService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IAppLogger<UserDialog> Logger
+@inject IMapper Mapper
+
 
 <MudDialog>
     <DialogContent>
-        <MudTextField @bind-Value="UserInternal.Email" Label="Email" Required="true" />
-        <MudTextField @bind-Value="UserInternal.UserName" Label="User Name" Required="true" />
-        <MudTextField @bind-Value="UserInternal.Profile.FirstName" Label="First Name" Required="true" />
-        <MudTextField @bind-Value="UserInternal.Profile.MiddleName" Label="Middle Name" />
-        <MudTextField @bind-Value="UserInternal.Profile.LastName" Label="Last Name" Required="true" />
-        <MudTextField @bind-Value="UserInternal.Profile.Phone" Label="Phone" />
-        <MudTextField @bind-Value="UserInternal.Profile.City" Label="City" />
-        <MudTextField @bind-Value="UserInternal.Profile.Country" Label="Country" />
+        @if (UserInternal.Profile != null)
+        {
+            <MudForm @ref="form" Model="@UserInternal">
+                <MudTextField 
+                    @bind-Value="UserInternal.Email"
+                    Label="Email" 
+                    Required="true" />
+                <MudTextField @bind-Value="UserInternal.UserName" Label="User Name" Required="true" />
+                <MudTextField @bind-Value="UserInternal.Profile.FirstName" Label="First Name" Required="true" />
+                <MudTextField @bind-Value="UserInternal.Profile.MiddleName" Label="Middle Name" />
+                <MudTextField @bind-Value="UserInternal.Profile.LastName" Label="Last Name" Required="true" />
+                <MudTextField @bind-Value="UserInternal.Profile.Phone" Label="Phone" />
+                <MudTextField @bind-Value="UserInternal.Profile.City" Label="City" />
+                <MudTextField @bind-Value="UserInternal.Profile.Country" Label="Country" />
        
-        @if (User == null)
-        {
-            <MudTextField @bind-Value="UserInternal.PlainPassword"
-                          Label="Password"
-                          InputType="InputType.Password"
-                          Required="true" />
-            <MudTextField @bind-Value="ConfirmPassword"
-                          Label="Confirm Password"
-                          InputType="InputType.Password"
-                          Required="true" />
-        }
-
-        <MudDivider Class="my-2" />
-        <MudText Typo="Typo.subtitle1">Roles:</MudText>
-        @if (AllRoles != null)
-        {
-            <MudSelect T="string"
-                       Label="Select Roles"
-                       SelectedValues="SelectedRoleNames"
-                       SelectedValuesChanged="OnSelectedValuesChanged"
-                       MultiSelection="true"
-                       Required="true"
-                       Dense="true">
-                @foreach (var role in AllRoles)
+                @if (User == null)
                 {
-                    <MudSelectItem T="string" Value="@role.Name">@role.Name</MudSelectItem>
+                    <MudTextField @bind-Value="UserInternal.PlainPassword"
+                                  Label="Password"
+                                  InputType="InputType.Password"
+                                  Required="true" />
+                    <MudTextField @bind-Value="ConfirmPassword"
+                                  Label="Confirm Password"
+                                  InputType="InputType.Password"
+                                  Required="true" />
                 }
-            </MudSelect>
+
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.subtitle1">Roles:</MudText>
+                @if (AllRoles != null)
+                {
+                    <MudSelect T="string"
+                               Label="Select Roles"
+                               SelectedValues="SelectedRoleNames"
+                               SelectedValuesChanged="OnSelectedValuesChanged"
+                               MultiSelection="true"
+                               Required="true"
+                               Dense="true">
+                        @foreach (var role in AllRoles)
+                        {
+                            <MudSelectItem T="string" Value="@role.Name">@role.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+
+            </MudForm>
         }
     </DialogContent>
 
@@ -56,31 +71,28 @@
     [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = null!;
     [Parameter] public UserDto? User { get; set; }
 
-    private UserDto UserInternal = new();
+    private UserDto UserInternal = new ();
     private List<RoleDto> AllRoles = new();
     private List<string> SelectedRoleNames = new List<string>();
     private string ConfirmPassword { get; set; } = string.Empty;
 
+    private MudForm form = null!;
+    private UserDtoValidator userValidator = new();
+
     protected override async Task OnInitializedAsync()
     {
+        AllRoles = (await RoleService.GetAllAsync()).ToList();
+
         if (User != null)
         {
-            UserInternal = new UserDto
-            {
-                Id = User.Id,
-                Email = User.Email,
-                UserName = User.UserName,
-                Profile = new UserProfileDto
-                {
-                    FirstName = User.Profile.FirstName,
-                    MiddleName = User.Profile.MiddleName,
-                    LastName = User.Profile.LastName,
-                    Phone = User.Profile.Phone,
-                    City = User.Profile.City,
-                    Country = User.Profile.Country
-                },
-                Roles = User.Roles
-            };
+            UserInternal = Mapper.Map<UserDto>(User);
+
+            // Pre-select user's roles
+            SelectedRoleNames = AllRoles
+                .Where(r => UserInternal.Roles.Contains(r.Name))
+                .Select(r => r.Name)
+                .ToList();
+
             Logger.LogInformation("Current existed User: {UserName}", User.UserName);
         }
         else
@@ -93,47 +105,52 @@
             Logger.LogInformation("Current new User: {UserInternal}", UserInternal);
         }
 
-        AllRoles = (await RoleService.GetAllAsync()).ToList();
-
-
-        // Pre-select user's roles
-        SelectedRoleNames = AllRoles
-            .Where(r => UserInternal.Roles.Contains(r.Name))
-            .Select(r => r.Name)
-            .ToList();
     }
 
     private async Task Save()
     {
-        if (string.IsNullOrWhiteSpace(UserInternal.Email) ||
-            string.IsNullOrWhiteSpace(UserInternal.Profile.FirstName) ||
-            string.IsNullOrWhiteSpace(UserInternal.Profile.LastName)
-        )
+        // if (string.IsNullOrWhiteSpace(UserInternal.Email) ||
+        //     string.IsNullOrWhiteSpace(UserInternal.Profile.FirstName) ||
+        //     string.IsNullOrWhiteSpace(UserInternal.Profile.LastName)
+        // )
+        // {
+        //     Snackbar.Add("Email and Full Name are required.", MudBlazor.Severity.Warning);
+        //     return;
+        // }
+
+        // Validate the model using FluentValidation
+        var validationResult = await userValidator.ValidateAsync(UserInternal);
+        if(!validationResult.IsValid)
         {
-            Snackbar.Add("Email and Full Name are required.", Severity.Warning);
+            foreach(var error in validationResult.Errors)
+            {
+                Snackbar.Add(error.ErrorMessage, MudBlazor.Severity.Error);
+            }
             return;
         }
 
-        if(User == null)   // Creating Mode
+
+        // Extra validations for password on creation
+        if (User == null)
         {
-            if (string.IsNullOrWhiteSpace(UserInternal.PlainPassword) ||
-           string.IsNullOrWhiteSpace(ConfirmPassword))
+            if (string.IsNullOrWhiteSpace(UserInternal.PlainPassword) || string.IsNullOrWhiteSpace(ConfirmPassword))
             {
-                Snackbar.Add("Password and Confirm Password are required.", Severity.Warning);
+                Snackbar.Add("Password and Confirm Password are required.", MudBlazor.Severity.Warning);
                 return;
             }
 
             if (UserInternal.PlainPassword != ConfirmPassword)
             {
-                Snackbar.Add("Passwords do not match.", Severity.Error);
+                Snackbar.Add("Passwords do not match.", MudBlazor.Severity.Error);
                 return;
             }
-
         }
+
+
         // Roles validation
         if (!SelectedRoleNames.Any())
         {
-            Snackbar.Add("Please select at least one role.", Severity.Warning);
+            Snackbar.Add("Please select at least one role.", MudBlazor.Severity.Warning);
             return;
         }
 
@@ -147,19 +164,19 @@
             if (UserInternal.Id == Guid.Empty)
             {
                 await UserService.CreateAsync(UserInternal);
-                Snackbar.Add("User created.", Severity.Success);
+                Snackbar.Add("User created.", MudBlazor.Severity.Success);
             }
             else
             {
                 await UserService.UpdateAsync(UserInternal);
-                Snackbar.Add("User updated.", Severity.Success);
+                Snackbar.Add("User updated.", MudBlazor.Severity.Success);
             }    
             
             MudDialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)
         {
-            Snackbar.Add(ex.Message, Severity.Error);
+            Snackbar.Add(ex.Message, MudBlazor.Severity.Error);
         }
 
      

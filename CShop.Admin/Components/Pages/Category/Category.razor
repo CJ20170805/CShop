@@ -1,0 +1,130 @@
+﻿@page "/category"
+@layout MainLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject ICategoryService CategoryService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudPaper Class="pa-4">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+        <MudText Typo="Typo.h5">Category Management</MudText>
+        <MudButton Color="Color.Primary" OnClick="CreateCategoryDialog">+ Add Category</MudButton>
+    </MudStack>
+
+    <MudTreeView Items="@TreeItems" @bind-SelectedValues="SelectedValues">
+        <ItemTemplate Context="context">
+            <MudTreeViewItem Items="@context.Children" Value="@context.Value">
+                 <BodyContent Context="itemContext"> 
+                     <div style="display: grid; grid-template-columns: 1fr auto; align-items: center; width: 100%">
+                        <MudText Style="justify-self: start;">@context.Text</MudText>
+                        <div style="justify-self: end;">
+                            <MudIconButton
+                                Icon="@Icons.Material.Filled.Edit" 
+                                Size="Size.Medium" 
+                                Color="Color.Inherit"
+                                           OnClick="@(() => EditCategoryDialog(context.Value))" />
+
+                            <MudIconButton 
+                                Icon="@Icons.Material.Filled.Delete" 
+                                Size="Size.Medium" 
+                                Color="Color.Inherit"
+                                OnClick="@(() => DeleteCategory(context.Value))" />
+                        </div>
+                    </div>
+                </BodyContent>
+            </MudTreeViewItem>
+        </ItemTemplate>
+    </MudTreeView>
+
+    @* <MudStack Row="true" Justify="Justify.FlexStart" AlignItems="AlignItems.Center">
+        <MudText Typo="Typo.h5">Selected: </MudText>
+        @{
+            foreach(var s in SelectedValues)
+            {
+                <MudText Typo="Typo.h5">@s</MudText>
+            }
+        }
+    </MudStack> *@
+</MudPaper>
+
+@code {
+    private IReadOnlyCollection<Guid> SelectedValues { get; set; } = new List<Guid>();
+
+    private List<CategoryDto> Categories = new();
+    private List<TreeItemData<Guid>> TreeItems { get; set; } = new();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        Categories = (await CategoryService.GetAllAsync()).ToList();
+        TreeItems = MapCategoriesToTree(Categories);
+    }
+
+    private List<TreeItemData<Guid>> MapCategoriesToTree(List<CategoryDto> categories)
+    {
+        return categories.Select(c => new TreeItemData<Guid>
+            {
+                Text = c.Name,
+                Value = c.Id,
+                Children = MapCategoriesToTree(c.SubCategories)
+            }).ToList();
+    }
+
+    private async Task CreateCategoryDialog()
+    {
+        var parameters = new DialogParameters { ["Categories"] = Categories };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium };
+        var dialog = await DialogService.ShowAsync<CategoryDialog>("Create Category", parameters, options);
+        var result = await dialog.Result;
+
+        if (result?.Canceled != true)
+            await LoadData();
+    }
+
+    private CategoryDto? FindCategoryById(Guid id, List<CategoryDto> list)
+    {
+        foreach(var c in list)
+        {
+            if (c.Id == id)
+                return c;
+            var found = FindCategoryById(id, c.SubCategories);
+            if (found != null)
+                return found;
+        }
+        return null;
+    }
+
+    private async Task EditCategoryDialog(Guid categoryId)
+    {
+        var category = FindCategoryById(categoryId, Categories);
+        if (category == null)
+            return;
+
+        var parameters = new DialogParameters { ["Category"] = category, ["Categories"] = Categories };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium };
+        var dialog = await DialogService.ShowAsync<CategoryDialog>("Edit Category", parameters, options);
+        var result = await dialog.Result;
+
+        if (result?.Canceled != true)
+            await LoadData();
+    }
+
+    private async Task DeleteCategory(Guid categoryId)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Warning",
+            "You're deleting a category!",
+            yesText: "Delete!", cancelText: "Cancel");
+
+        if (result == null) return;
+
+        bool success = await CategoryService.DeleteAsync(categoryId);
+        Snackbar.Add(success ? "Category deleted." : "Delete failed.", success ? Severity.Success : Severity.Error);
+        await LoadData();
+    }
+}

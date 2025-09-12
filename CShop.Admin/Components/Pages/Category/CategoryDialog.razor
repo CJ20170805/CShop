@@ -1,0 +1,125 @@
+﻿@using AutoMapper
+@using FluentValidation
+@using CShop.Application.DTOs
+@using CShop.Application.Validators
+@inject ICategoryService CategoryService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IAppLogger<CategoryDialog> Logger
+@inject IMapper Mapper
+
+
+<MudDialog>
+    <DialogContent>
+        @if (CategoryInternal != null)
+        {
+            <MudForm @ref="form" Model="@CategoryInternal">
+                <MudTextField @bind-Value="CategoryInternal.Name" Label="Category Name" Required="true" />
+
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.subtitle1">Parent Category:</MudText>
+                <MudSelect T="Guid?"
+                            Label="Select Parent Category"
+                           @bind-Value="SelectedCategoryId"
+                            Clearable="true"
+                            Dense="true">
+                    <MudSelectItem T="Guid?" Value=@(Guid.Empty)>No Parent</MudSelectItem>
+                    @foreach (var c in Categories)
+                    {
+                        <MudSelectItem T="Guid?" Value="@c.Id">@c.Name</MudSelectItem>
+                    }
+                </MudSelect>
+                @* <MudText Typo="Typo.subtitle1">Selected Parent Category: @SelectedCategoryId</MudText> *@
+            </MudForm>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Save">Save</MudButton>
+        <MudButton Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public CategoryDto? Category { get; set; }
+    [Parameter] public List<CategoryDto> Categories { get; set; } = new List<CategoryDto>();
+
+    private CategoryDto CategoryInternal = new();
+    private Guid? SelectedCategoryId { get; set; } = null;
+
+    private MudForm form = null!;
+    private CategoryDtoValidator categoryValidator = new();
+
+    protected override void OnInitialized()
+    {
+        if (Category != null)
+        {
+            CategoryInternal = Mapper.Map<CategoryDto>(Category);
+            SelectedCategoryId = CategoryInternal.ParentCategoryId;
+
+            Logger.LogInformation("Editing Category: {CategoryName}", Category.Name);
+        }
+        else
+        {
+            CategoryInternal = new CategoryDto
+            {
+                SubCategories = new List<CategoryDto>()
+            };
+            SelectedCategoryId = Guid.Empty;
+
+            Logger.LogInformation("Creating new Category");
+        }
+
+    }
+
+    private async Task Save()
+    {
+        // Validate the model using FluentValidation
+        var validationResult = await categoryValidator.ValidateAsync(CategoryInternal);
+        if(!validationResult.IsValid)
+        {
+            foreach(var error in validationResult.Errors)
+            {
+                Snackbar.Add(error.ErrorMessage, MudBlazor.Severity.Error);
+            }
+            return;
+        }
+
+        // Assign selected ParentCategoryId
+        CategoryInternal.ParentCategoryId = SelectedCategoryId == Guid.Empty ? null : SelectedCategoryId;
+
+        try
+        {
+            if (CategoryInternal.Id == Guid.Empty)
+            {
+                await CategoryService.CreateAsync(CategoryInternal);
+                Snackbar.Add("Category created.", MudBlazor.Severity.Success);
+            }
+            else
+            {
+                await CategoryService.UpdateAsync(CategoryInternal);
+                Snackbar.Add("Category updated.", MudBlazor.Severity.Success);
+            }    
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, MudBlazor.Severity.Error);
+        }
+
+
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void OnSelectedValuesChanged(Guid selectedValue) 
+    {
+        SelectedCategoryId = selectedValue;
+    }
+
+}

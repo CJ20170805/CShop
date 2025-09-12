@@ -49,7 +49,7 @@ namespace CShop.Infrastructure.Services
             var user = await _userManager.Users
                 .Include(u => u.Addresses)
                 .Include(u => u.Profile)
-                .FirstOrDefaultAsync(u => u.Id == id);
+                .FirstOrDefaultAsync(u => u.Id == id); 
             if (user == null) return null;
 
             var dto = _mapper.Map<UserDto>(user);

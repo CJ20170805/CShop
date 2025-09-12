@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
 
 namespace CShop.Infrastructure.Services
 {
@@ -18,53 +19,39 @@ namespace CShop.Infrastructure.Services
        // private readonly AppDbContext _context;
         private readonly UserManager<AppUser> _userManager;
         private readonly RoleManager<AppRole> _roleManager;
+        private readonly IMapper _mapper;
         // public RoleService(AppDbContext context) => _context = context;
-        public RoleService(UserManager<AppUser> userManager, RoleManager<AppRole> roleManager)
+        public RoleService(UserManager<AppUser> userManager, RoleManager<AppRole> roleManager, IMapper mapper)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _mapper = mapper;
         }
 
         public async Task<IEnumerable<RoleDto>> GetAllAsync()
         {
-            return await _roleManager.Roles
-                .Select(
-                    r => new RoleDto
-                    {
-                        Id = r.Id,
-                        Name = r.Name!,
-                    })
-                .ToListAsync();
+            var roles = await _roleManager.Roles.ToListAsync();
+            return _mapper.Map<IEnumerable<RoleDto>>(roles);
 
         }
 
         public async Task<RoleDto?> GetByIdAsync(Guid id)
         {
             var role = await _roleManager.FindByIdAsync(id.ToString());
-            if (role == null) { return null; }
-
-            return new RoleDto { Id = role.Id, Name = role.Name! };
+            return role == null ? null : _mapper.Map<RoleDto>(role);
         }
 
         public async Task<RoleDto> CreateAsync(RoleDto dto)
         {
-            var role = new AppRole 
-            { 
-                Id = dto.Id, 
-                Name = dto.Name,
-                NormalizedName = dto.Name!.ToUpper()
-            };
+            var role = _mapper.Map<AppRole>(dto);
+            role.NormalizedName = dto.Name!.ToUpper();
 
             var result = await _roleManager.CreateAsync(role);
 
             if (!result.Succeeded)
                 throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
 
-            return new RoleDto
-            {
-                Id = dto.Id,
-                Name = dto.Name
-            };
+            return _mapper.Map<RoleDto>(role);
         }
 
         public async Task<RoleDto?> UpdateAsync(RoleDto dto)
@@ -72,7 +59,7 @@ namespace CShop.Infrastructure.Services
             var role = await _roleManager.FindByIdAsync(dto.Id.ToString());
             if (role == null) { return null; }
 
-            role.Name = dto.Name;
+            _mapper.Map(dto, role);
             role.NormalizedName = dto.Name!.ToUpper();
 
 
@@ -81,7 +68,7 @@ namespace CShop.Infrastructure.Services
             if (!result.Succeeded)
                 throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
 
-            return new RoleDto { Id = dto.Id, Name = dto.Name };
+            return _mapper.Map<RoleDto>(role);
         }
 
         public async Task<bool> DeleteAsync(Guid id)

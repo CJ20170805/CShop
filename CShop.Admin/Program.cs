@@ -9,11 +9,16 @@ using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 using NLog.Web;
 using CShop.Infrastructure.Logging;
-using AutoMapper;
 using CShop.Application.Mapping;
-
+using CShop.Application.Validators;
+using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Add FluentValidation
+builder.Services.AddValidatorsFromAssemblyContaining<UserDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<CategoryDtoValidator>();
+
 
 
 // Configure NLog
@@ -25,7 +30,11 @@ builder.Host.UseNLog();
 
 builder.Services.AddScoped(typeof(IAppLogger<>), typeof(LoggerAdapter<>));
 
+
+// Add AutoMapper
 builder.Services.AddAutoMapper(typeof(UserMappingProfile).Assembly);
+builder.Services.AddAutoMapper(typeof(RoleProfile).Assembly);
+builder.Services.AddAutoMapper(typeof(CategoryProfile).Assembly);
 
 
 // Add services to the container.
@@ -73,6 +82,7 @@ builder.Services.AddAuthorization(options =>
 // Register application services
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
 
 
 var app = builder.Build();

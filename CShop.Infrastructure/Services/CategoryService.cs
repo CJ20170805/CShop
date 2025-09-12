@@ -46,7 +46,7 @@ namespace CShop.Infrastructure.Services
         }
 
         public async Task<CategoryDto?> GetByIdAsync(Guid id)
-        {
+        { 
             return await _context.Categories
                 .Where(c => c.Id == id)
                 .Select(c => new CategoryDto
