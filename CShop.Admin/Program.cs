@@ -15,11 +15,16 @@ using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Register application services
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+
 // Add FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<UserDtoValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<CategoryDtoValidator>();
-
-
+builder.Services.AddValidatorsFromAssemblyContaining<ProductDtoValidator>();
 
 // Configure NLog
 builder.Logging.ClearProviders();
@@ -35,6 +40,7 @@ builder.Services.AddScoped(typeof(IAppLogger<>), typeof(LoggerAdapter<>));
 builder.Services.AddAutoMapper(typeof(UserMappingProfile).Assembly);
 builder.Services.AddAutoMapper(typeof(RoleProfile).Assembly);
 builder.Services.AddAutoMapper(typeof(CategoryProfile).Assembly);
+builder.Services.AddAutoMapper(typeof(ProductProfile).Assembly);
 
 
 // Add services to the container.
@@ -79,10 +85,6 @@ builder.Services.AddAuthorization(options =>
 //builder.Services.AddScoped<SignInManager<AppUser>>();
 //builder.Services.AddScoped<UserManager<AppUser>>();
 
-// Register application services
-builder.Services.AddScoped<IRoleService, RoleService>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<ICategoryService, CategoryService>();
 
 
 var app = builder.Build();

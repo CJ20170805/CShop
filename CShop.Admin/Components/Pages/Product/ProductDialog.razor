@@ -1,0 +1,181 @@
+﻿@using AutoMapper
+@using CShop.Application.Validators
+@inject IProductService ProductService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IMapper Mapper
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="ProductInternal.Name" Label="Product Name" Required="true" />
+        <MudTextField @bind-Value="ProductInternal.Description" Label="Product Description" Required="true" />
+        <MudNumericField @bind-Value="ProductInternal.Price" Label="Product Price" Required="true" />
+        <MudNumericField @bind-Value="ProductInternal.Stock" Label="Product Stock" Required="true" />
+        @if (Categories != null)
+        {
+        <MudTreeView Hover ReadOnly="false" AutoExpand="true" Items="@TreeItems" @bind-SelectedValue="ProductInternal.CategoryId" SelectionMode="SelectionMode.SingleSelection">
+                <ItemTemplate Context="context">
+                    <MudTreeViewItem Items="@context.Children" Value="@context.Value">
+                        <BodyContent Context="itemContext">
+                              <MudText Style="justify-self: start;">@context.Text</MudText>
+                        </BodyContent>
+                    </MudTreeViewItem>
+                </ItemTemplate>
+        </MudTreeView>
+     
+        }
+        <MudGrid Class="mt-2">
+            @foreach (var img in ProductInternal.ProductImages)
+            {
+                <MudItem xs="6" sm="4" md="3">
+                    <MudPaper Class="relative rounded-lg overflow-hidden border" Style="height:150px; width:150px;">
+                        <MudImage Src="@img.ImageUrl" Alt="Product Image" Style="object-fit:cover; height:100%; width:100%;" />
+
+                         <!-- Primary switch -->
+                        <MudSwitch Class="absolute bottom-0 left-0 m-1 bg-white rounded-full shadow"
+                           Style="left:0; right:0; bottom:0;"
+                           Value="@img.IsPrimary"
+                           Color="Color.Primary"
+                           ValueChanged="@((bool val) => SetPrimaryImage(img, val))"
+                           Label="Primary" />
+
+                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                       Color="Color.Error"
+                                       Size="Size.Small"
+                                       Style="right: 0;"
+                                       Class="absolute top-0 right-0 m-1 bg-white rounded-full shadow"
+                                       OnClick="@(() => RemoveImage(img))" />
+                    </MudPaper>
+                </MudItem>
+            }
+
+            <!-- Add Button Block -->
+            <MudItem xs="6" sm="4" md="3">
+                <MudPaper Class="flex items-center justify-center align-items-center border-2 border-dashed rounded-lg cursor-pointer hover:bg-grey-light"
+                          Style="height:150px; width:150px; display:flex; align-items: center; justify-content: center;"
+                          @onclick="TriggerUpload">
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Large" />
+                </MudPaper>
+            </MudItem>
+
+
+            <!-- Hidden File Upload -->
+            <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                           AppendMultipleFiles
+                           OnFilesChanged="OnFilesSelected"
+                           Class="hidden"
+                           @ref="_fileUpload" />
+        </MudGrid>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Save">Save</MudButton>
+        <MudButton Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public ProductDto? Product { get; set; }
+    [Parameter] public List<CategoryDto>? Categories { get; set; }
+
+    private List<TreeItemData<Guid>> TreeItems { get; set; } = new();
+    private MudFileUpload<IReadOnlyList<IBrowserFile>>? _fileUpload;
+    private ProductDto ProductInternal = new();
+    private ProductDtoValidator productValidator = new();
+
+    protected override void OnInitialized()
+    {
+        if(Categories != null)
+            TreeItems = MapCategoriesToTree(Categories);
+
+        if (Product != null)
+            ProductInternal = Mapper.Map<ProductDto>(Product);
+        else
+            ProductInternal = new ProductDto();
+    }
+
+    private List<TreeItemData<Guid>> MapCategoriesToTree(List<CategoryDto> categories)
+    {
+        return categories.Select(c => new TreeItemData<Guid>
+        {
+            Text = c.Name,
+            Value = c.Id,
+            Children = MapCategoriesToTree(c.SubCategories)
+        }).ToList();
+    }
+
+    private void SetPrimaryImage(ProductImageDto image, bool isChecked)
+    {
+        if (isChecked)
+        {
+            foreach (var img in ProductInternal.ProductImages)
+            {
+                img.IsPrimary = false;
+            }
+            image.IsPrimary = true;
+        }
+    }
+
+    private async Task TriggerUpload()
+    {
+        if (_fileUpload == null) return;
+        await _fileUpload.OpenFilePickerAsync(); // opens the file picker
+    }
+
+    private async Task OnFilesSelected(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles())
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024); // 5MB max
+            var buffer = new byte[file.Size];
+            await stream.ReadAsync(buffer);
+            var base64 = Convert.ToBase64String(buffer);
+
+            ProductInternal.ProductImages.Add(new ProductImageDto
+            {
+                Id = Guid.Empty,
+                ProductId = ProductInternal.Id,
+                ImageUrl = $"data:{file.ContentType};base64,{base64}",
+                IsPrimary = ProductInternal.ProductImages.Count == 0
+            });
+        }
+    }
+
+    private void RemoveImage(ProductImageDto image)
+    {
+        ProductInternal.ProductImages.Remove(image);
+    }
+
+    private async Task Save()
+    {
+        // Validate the model using FluentValidation
+        var validationResult = await productValidator.ValidateAsync(ProductInternal);
+        if (!validationResult.IsValid)
+        {
+            foreach (var error in validationResult.Errors)
+            {
+                Snackbar.Add(error.ErrorMessage, MudBlazor.Severity.Error);
+            }
+            return;
+        }
+
+        if (ProductInternal.Id == Guid.Empty)
+        {
+            await ProductService.CreateAsync(ProductInternal);
+            Snackbar.Add("Product created.", Severity.Success);
+        }
+        else
+        {
+            await ProductService.UpdateAsync(ProductInternal);
+            Snackbar.Add("Product updated.", Severity.Success);
+        }
+
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

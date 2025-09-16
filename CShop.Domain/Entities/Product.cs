@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CShop.Domain.ValueObjects;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,13 +17,17 @@ namespace CShop.Domain.Entities
         public string? SKU { get; set; }
         public string? Barcode { get; set; }
 
-        public decimal Price { get; set; }
-        public int Stock {  get; set; }
-        public string? ImageUrl { get; set; }
+        public Money Price { get; set; } = null!;
+        public Stock Stock {  get; set; } = null!;
 
         public Guid CategoryId { get; set; }
         public Category Category { get; set; } = null!;
 
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+
+        public ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();
         public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
         public ICollection<ProductTag> ProductTags { get; set; } = new List<ProductTag>();
     }

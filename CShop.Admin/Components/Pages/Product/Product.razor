@@ -1,0 +1,84 @@
+﻿@page "/product"
+@attribute [Authorize(Roles = "Admin")]
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudButton Color="Color.Primary" OnClick="CreateProductDialog" Variant="Variant.Filled" Class="mb-3">
+    Create New Product
+</MudButton>
+
+<MudTable Items="Products" Hover="true" Bordered="true">
+    <HeaderContent>
+        <MudTh>Name</MudTh>
+        <MudTh>Description</MudTh>
+        @* <MudTh>SKU</MudTh>
+        <MudTh>Barcode</MudTh> *@
+        <MudTh>Price</MudTh>
+        <MudTh>Currency</MudTh>
+        <MudTh>Stock</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.Name</MudTd>
+        <MudTd>@context.Description</MudTd>
+        <MudTd>@context.Price</MudTd>
+        <MudTd>@context.Currency</MudTd>
+        <MudTd>@context.Stock</MudTd>
+        <MudTd>
+            <MudButton Color="Color.Warning" Size="Size.Small" OnClick="@(() => EditProductDialog(context))">Edit</MudButton>
+            <MudButton Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteProduct(context.Id))">Delete</MudButton>
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<ProductDto> Products = new();
+    private List<CategoryDto> Categories = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        Products = (await ProductService.GetAllAsync()).ToList();
+        Categories = (await CategoryService.GetAllAsync()).ToList();
+    }
+
+    private async Task CreateProductDialog()
+    {
+        var parameters = new DialogParameters {["Categories"] = Categories };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
+        var dialog = await DialogService.ShowAsync<ProductDialog>("Create Product", parameters, options: options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+            await LoadProducts();
+    }
+
+    private async Task EditProductDialog(ProductDto Product)
+    {
+        var parameters = new DialogParameters { ["Product"] = Product, ["Categories"] = Categories };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
+        var dialog = await DialogService.ShowAsync<ProductDialog>("Edit Product", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+            await LoadProducts();
+    }
+
+    private async Task DeleteProduct(Guid ProductId)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+           "Warning",
+           "You're deleting a product!",
+           yesText: "Delete!", cancelText: "Cancel");
+
+        if (result == null) return;
+        bool success = await ProductService.DeleteAsync(ProductId);
+        Snackbar.Add(success ? "Product deleted." : "Delete failed.", success ? Severity.Success : Severity.Error);
+        await LoadProducts();
+    }
+}
