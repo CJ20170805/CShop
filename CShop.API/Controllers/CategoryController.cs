@@ -1,5 +1,6 @@
 ﻿using CShop.Application.DTOs;
 using CShop.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,6 +28,7 @@ namespace CShop.API.Controllers
             return Ok(category);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<CategoryDto>> Create(CategoryDto dto)
         {
@@ -34,14 +36,18 @@ namespace CShop.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = created.Id },created);
         }
 
-        [HttpPut]
-        public async Task<ActionResult<CategoryDto>> Update(CategoryDto dto)
+        [Authorize(Roles = "Admin")]
+        [HttpPut("{id}")]
+        public async Task<ActionResult<CategoryDto>> Update(Guid id, [FromBody] CategoryDto dto)
         {
+            if (id != dto.Id) return BadRequest("ID mismatch");
+
             var updated = await _service.UpdateAsync(dto);
             if(updated == null) return NotFound();
             return Ok(updated);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
