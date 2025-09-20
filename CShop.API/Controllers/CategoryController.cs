@@ -12,7 +12,6 @@ namespace CShop.API.Controllers
         private readonly ICategoryService _service;
         public CategoryController(ICategoryService service) => _service = service;
 
-
         [HttpGet]
         public async Task<ActionResult<IEnumerable<CategoryDto>>> GetAll()
         {
@@ -21,9 +20,9 @@ namespace CShop.API.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<CategoryDto>> GetById(Guid Id)
+        public async Task<ActionResult<CategoryDto>> GetById(Guid id)
         {
-            var category = await _service.GetByIdAsync(Id);
+            var category = await _service.GetByIdAsync(id);
             if (category == null) return NotFound();
             return Ok(category);
         }
@@ -35,7 +34,7 @@ namespace CShop.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = created.Id },created);
         }
 
-        [HttpPut("{id}")]
+        [HttpPut]
         public async Task<ActionResult<CategoryDto>> Update(CategoryDto dto)
         {
             var updated = await _service.UpdateAsync(dto);
