@@ -4,6 +4,8 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IMapper Mapper
+@inject IAppLogger<ProductDialog> Logger
+@inject IFileStorageService FileStorageService
 
 <MudDialog>
     <DialogContent>
@@ -125,20 +127,51 @@
 
     private async Task OnFilesSelected(InputFileChangeEventArgs e)
     {
+        string targetDirectory = @"D:\xxx\images";
+
+        if(!Directory.Exists(targetDirectory))
+        {
+            Directory.CreateDirectory(targetDirectory);
+        }
+
         foreach (var file in e.GetMultipleFiles())
         {
-            using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024); // 5MB max
-            var buffer = new byte[file.Size];
-            await stream.ReadAsync(buffer);
-            var base64 = Convert.ToBase64String(buffer);
+            // Generate a unique filename to avoid collisions
+            // var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+            // var filePath = Path.Combine(targetDirectory, uniqueFileName);
+
+            // try
+            // {
+            //     await using FileStream fs = new(filePath, FileMode.Create);
+            //     Copy the uploaded file's stream to the local file stream
+            //     await file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(fs);
+
+            //     ProductInternal.ProductImages.Add(new ProductImageDto
+            //     {
+            //         Id = Guid.Empty,
+            //         ProductId = ProductInternal.Id,
+            //         ImageUrl = $"/images/{uniqueFileName}",
+            //         IsPrimary = ProductInternal.ProductImages.Count == 0
+            //     });
+            // }
+            // catch (IOException ex)
+            // {
+            //     Logger.LogError(ex, $"Error saving file: {ex.Message}");
+            // }
+
+            var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+            await using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+
+            var url = await FileStorageService.UploadAsync(stream, uniqueFileName, "image/png", "Products");
 
             ProductInternal.ProductImages.Add(new ProductImageDto
             {
                 Id = Guid.Empty,
                 ProductId = ProductInternal.Id,
-                ImageUrl = $"data:{file.ContentType};base64,{base64}",
+                ImageUrl = url,
                 IsPrimary = ProductInternal.ProductImages.Count == 0
             });
+
         }
     }
 

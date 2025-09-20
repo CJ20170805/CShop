@@ -1,25 +1,31 @@
 using CShop.Admin.Components;
 using CShop.Admin.Services;
 using CShop.Application.Interfaces;
-using CShop.Infrastructure.Data;
+using CShop.Application.Mapping;
+using CShop.Application.Options;
+using CShop.Application.Validators;
 using CShop.Domain.Identity;
+using CShop.Infrastructure.Data;
+using CShop.Infrastructure.Logging;
 using CShop.Infrastructure.Services;
+using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
 using NLog.Web;
-using CShop.Infrastructure.Logging;
-using CShop.Application.Mapping;
-using CShop.Application.Validators;
-using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure<StorageOptions>(
+    builder.Configuration.GetSection("AzureBlobStorage"));
 
 // Register application services
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddSingleton<IFileStorageService, FileStorageService>();
 
 // Add FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<UserDtoValidator>();
@@ -88,6 +94,14 @@ builder.Services.AddAuthorization(options =>
 
 
 var app = builder.Build();
+
+
+// Static file provider
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(@"D:\xxx\images"),
+    RequestPath = "/images"
+});
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
