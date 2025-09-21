@@ -1,18 +1,20 @@
 using CShop.Application.Interfaces;
 using CShop.Application.Mapping;
-using CShop.Infrastructure.Data;
 using CShop.Domain.Identity;
-using Microsoft.AspNetCore.Identity;
+using CShop.Infrastructure.Data;
+using CShop.Infrastructure.Logging;
 using CShop.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using Microsoft.OpenApi.Models;
+using System.Text;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure JWT authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured");
 var key = Encoding.UTF8.GetBytes(jwtKey);
 
@@ -38,6 +40,12 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// Configure Cache
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ICacheService, MemoryCacheService>();
+
+// Add Logger
+builder.Services.AddScoped(typeof(IAppLogger<>), typeof(LoggerAdapter<>));
 
 // Add services to the container.
 builder.Services.AddControllers();

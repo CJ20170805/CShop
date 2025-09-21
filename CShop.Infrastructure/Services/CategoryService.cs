@@ -9,26 +9,36 @@ namespace CShop.Infrastructure.Services
     public class CategoryService: ICategoryService
     {
         private readonly AppDbContext _context;
+        private readonly ICacheService _cache;
+        private readonly IAppLogger<CategoryService> _logger;
 
-        public CategoryService(AppDbContext context) { _context = context; }
+        public CategoryService(AppDbContext context, ICacheService cache, IAppLogger<CategoryService> logger)
+        {
+            _context = context;
+            _cache = cache;
+            _logger = logger;
+        }
 
         public async Task<IEnumerable<CategoryDto>> GetAllAsync()
         {
-            //return await _context.Categories
-            //    .Select(c => new CategoryDto
-            //    {
-            //        Id = c.Id,
-            //        Name = c.Name,
-            //        ParentCategoryId = c.ParentCategoryId,
-            //    })
-            //    .ToListAsync();
+            var cacheKey = "categories";
+            var cached = await _cache.GetAsync<IEnumerable<CategoryDto>>(cacheKey);
+
+            if (cached != null)
+            {
+                _logger.LogInformation("Categories retrieved from cache.");
+                return cached;
+            }
 
             var categories = await _context.Categories
                 .Where(c => c.ParentCategoryId == null)
                 .Include(c => c.SubCategories)
                 .ToListAsync();
 
-            return categories.Select(c => MapCategory(c)).ToList();
+            _logger.LogInformation("Categories retrieved from database.");
+            var CategoryDtos =  categories.Select(c => MapCategory(c)).ToList();
+            await _cache.SetAsync(cacheKey, CategoryDtos, TimeSpan.FromHours(1));
+            return CategoryDtos;
         }
 
         // Recursive mapper
