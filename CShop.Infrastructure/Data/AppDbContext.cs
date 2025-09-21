@@ -131,6 +131,38 @@ namespace CShop.Infrastructure.Data
                 .WithMany(p => p.OrderItems)
                 .HasForeignKey(oi => oi.ProductId);
 
+            // Order value objects configuration
+            modelBuilder.Entity<Order>(entity =>
+            {
+                entity.OwnsOne(o => o.TotalAmount, m =>
+                {
+                    m.Property(p => p.Amount).HasColumnName("TotalAmount");
+                    m.Property(p => p.Currency).HasColumnName("TotalCurrency").HasMaxLength(3);
+                });
+
+                entity.OwnsOne(o => o.ShippingAddress, sa => 
+                {                     
+                    sa.Property(a => a.RecipientName).HasColumnName("RecipientName").HasMaxLength(20);
+                    sa.Property(a => a.AddressLine1).HasColumnName("AddressLine1").HasMaxLength(100);
+                    sa.Property(a => a.AddressLine2).HasColumnName("AddressLine2").HasMaxLength(100);
+                    sa.Property(a => a.City).HasColumnName("City").HasMaxLength(20);
+                    sa.Property(a => a.City).HasColumnName("State").HasMaxLength(20);
+                    sa.Property(a => a.City).HasColumnName("PostalCode").HasMaxLength(10);
+                    sa.Property(a => a.Country).HasColumnName("Country").HasMaxLength(20);
+                });
+            });
+
+            // Order Item value objects configuration
+            modelBuilder.Entity<OrderItem>(entity =>
+            {
+                entity.OwnsOne(oi => oi.UnitPrice, m =>
+                {
+                    m.Property(p => p.Amount).HasColumnName("UnitPrice");
+                    m.Property(p => p.Currency).HasColumnName("UnitCurrency").HasMaxLength(3);
+                });
+            });
+
+
             // Tag <-> Product (M: M)
             modelBuilder.Entity<ProductTag>()
                 .HasKey(pt => new { pt.ProductId, pt.TagId });

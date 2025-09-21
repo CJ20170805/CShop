@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CShop.Domain.ValueObjects;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,8 +11,11 @@ namespace CShop.Domain.Entities
     {
         public Guid Id { get; set; }
         public int Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-        public decimal SubTotal => UnitPrice * Quantity;
+        public Money UnitPrice { get; set; } = null!;
+        public Money SubTotal => new Money(UnitPrice.Amount * Quantity, UnitPrice.Currency);
+
+        // Product snapshot info
+        public string ProductName { get; set; } = null!;
 
         //Relationships
         public Guid OrderId { get; set; }
