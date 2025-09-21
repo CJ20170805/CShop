@@ -70,6 +70,15 @@ namespace CShop.Infrastructure.Data
                 .WithMany(u => u.Orders)
                 .HasForeignKey(o => o.UserId);
 
+            // Enums to string conversion
+            modelBuilder.Entity<Order>()
+                .Property(o => o.Status)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<Order>()
+                .Property(o => o.PaymentMethod)
+                .HasConversion<string>();
+
             // Category hierachy (Parent <-> Subcategories)
             modelBuilder.Entity<Category>()
                 .HasOne(c => c.ParentCategory)
