@@ -19,6 +19,8 @@ namespace CShop.Infrastructure.Data
         public DbSet<Category> Categories { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<ProductImage> ProductImages { get; set; }
+        public DbSet<Cart> Carts { get; set; }
+        public DbSet<CartItem> CartItems { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<Tag> Tags { get; set; }
@@ -121,6 +123,29 @@ namespace CShop.Infrastructure.Data
 
             });
 
+            // Cart <-> CartItem (1:M)
+            modelBuilder.Entity<CartItem>()
+                .HasOne(ci => ci.Cart)
+                .WithMany(c => c.Items)
+                .HasForeignKey(ci => ci.CartId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // CartItem <-> Product (M:1)
+            modelBuilder.Entity<CartItem>()
+                .HasOne(ci => ci.Product)
+                .WithMany()
+                .HasForeignKey(ci => ci.ProductId);
+
+            // CartItem value objects configuration
+            modelBuilder.Entity<CartItem>(entity =>
+            {
+                entity.OwnsOne(ci => ci.UnitPrice, m =>
+                {
+                    m.Property(p => p.Amount).HasColumnName("UnitPrice").HasPrecision(18, 2);
+                    m.Property(p => p.Currency).HasColumnName("UnitCurrency").HasMaxLength(3);
+                });
+            });
+
             // Product <-> ProductImage (1:M)
             modelBuilder.Entity<ProductImage>()
                 .HasOne(pi => pi.Product)
@@ -166,7 +191,7 @@ namespace CShop.Infrastructure.Data
             {
                 entity.OwnsOne(oi => oi.UnitPrice, m =>
                 {
-                    m.Property(p => p.Amount).HasColumnName("UnitPrice");
+                    m.Property(p => p.Amount).HasColumnName("UnitPrice").HasPrecision(18, 2);
                     m.Property(p => p.Currency).HasColumnName("UnitCurrency").HasMaxLength(3);
                 });
             });
