@@ -30,6 +30,14 @@ namespace CShop.Infrastructure.Services
 
         public async Task<CartDto> GetByUserIdAsync(Guid userId)
         {
+            var cacheKey = $"cart_{userId}";
+            var cachedCart = await _cacheService.GetAsync<CartDto>(cacheKey);
+            if (cachedCart != null)
+            {
+                _logger.LogInformation($"Cart for user {userId} retrieved from cache.");
+                return cachedCart;
+            }
+
             var cart = await _context.Carts
                 .Include(c => c.Items)
                 .ThenInclude(i => i.Product)
@@ -49,7 +57,9 @@ namespace CShop.Infrastructure.Services
                 await _context.SaveChangesAsync();
             }
 
-            return _mapper.Map<CartDto>(cart);
+            var cartDto = _mapper.Map<CartDto>(cart);
+            await _cacheService.SetAsync(cacheKey, cartDto, TimeSpan.FromHours(1));
+            return cartDto;
         }
 
         public async Task<CartDto> AddItemAsync(Guid userId, Guid productId, int quantity)
@@ -97,6 +107,10 @@ namespace CShop.Infrastructure.Services
             cart.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
+            //Invalidate cache
+            var cacheKey = $"cart_{userId}";
+            await _cacheService.RemoveAsync(cacheKey);
+
             return _mapper.Map<CartDto>(cart);
         }
 
@@ -121,6 +135,11 @@ namespace CShop.Infrastructure.Services
             cart.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            //Invalidate cache
+            var cacheKey = $"cart_{userId}";
+            await _cacheService.RemoveAsync(cacheKey);
+
             return _mapper.Map<CartDto>(cart);
         }
 
@@ -142,6 +161,11 @@ namespace CShop.Infrastructure.Services
             cart.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            //Invalidate cache
+            var cacheKey = $"cart_{userId}";
+            await _cacheService.RemoveAsync(cacheKey);
+
             return _mapper.Map<CartDto>(cart);
         }
 
@@ -160,6 +184,10 @@ namespace CShop.Infrastructure.Services
             cart.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            //Invalidate cache
+            var cacheKey = $"cart_{userId}";
+            await _cacheService.RemoveAsync(cacheKey);
         }
     }
 }
