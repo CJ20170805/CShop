@@ -20,6 +20,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<StorageOptions>(
     builder.Configuration.GetSection("AzureBlobStorage"));
 
+// Configure Cache
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ICacheService, MemoryCacheService>();
+
 // Register application services
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserService, UserService>();
@@ -94,6 +98,30 @@ builder.Services.AddAuthorization(options =>
 
 
 var app = builder.Build();
+
+// Seed roles and admin user
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var userManager = services.GetRequiredService<UserManager<AppUser>>();
+        var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
+        var config = services.GetRequiredService<IConfiguration>();
+        var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger("AppDbSeeder");
+
+        await AppDbSeeder.SeedRolesAndAdminAsync(userManager, roleManager, config, logger);
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("AppDbSeeder");
+        logger.LogError(ex, "An error occurred while seeding roles or admin user.");
+    }
+}
+
 
 
 // Static file provider
